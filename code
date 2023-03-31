@@ -1,0 +1,92 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import TodoItem from "./TodoItem";
+
+function Dashboard() {
+  const [todos, setTodos] = useState([]);
+  const [newTodo, setNewTodo] = useState("");
+  const [draggedTodo, setDraggedTodo] = useState(null);
+
+  useEffect(() => {
+    axios.get("/api/todos").then((res) => {
+      setTodos(res.data);
+    });
+  }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    axios.post("/api/todos", { text: newTodo }).then((res) => {
+      setTodos([...todos, res.data]);
+      setNewTodo("");
+    });
+  };
+
+  const handleDragStart = (e, todo) => {
+    setDraggedTodo(todo);
+  };
+
+  const handleDragOver = (e, todo) => {
+    e.preventDefault();
+    const draggedOverIndex = todos.indexOf(todo);
+    const todosCopy = [...todos];
+    const draggedTodoIndex = todos.indexOf(draggedTodo);
+    todosCopy.splice(draggedTodoIndex, 1);
+    todosCopy.splice(draggedOverIndex, 0, draggedTodo);
+    setTodos(todosCopy);
+  };
+
+  const handleCheck = (todo) => {
+    axios.put(`/api/todos/${todo._id}`, { completed: !todo.completed }).then((res) => {
+      setTodos(todos.map((t) => (t._id === todo._id ? res.data : t)));
+    });
+  };
+
+  const handleDelete = (todo) => {
+    axios.delete(`/api/todos/${todo._id}`).then(() => {
+      setTodos(todos.filter((t) => t._id !== todo._id));
+    });
+  };
+
+  const handleStrike = (todo) => {
+    axios.put(`/api/todos/${todo._id}`, { striked: !todo.striked }).then((res) => {
+      setTodos(todos.map((t) => (t._id === todo._id ? res.data : t)));
+    });
+  };
+
+  return (
+    <div className="p-4">
+      <form onSubmit={handleSubmit}>
+        <div className="flex mb-4">
+          <input
+            type="text"
+            className="border-2 border-gray-400 p-2 w-full rounded-l-md focus:outline-none focus:border-blue-400"
+            placeholder="Add a new todo..."
+            value={newTodo}
+            onChange={(e) => setNewTodo(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r-md"
+          >
+            Add
+          </button>
+        </div>
+      </form>
+      <ul>
+        {todos.map((todo) => (
+          <TodoItem
+            key={todo._id}
+            todo={todo}
+            onDragStart={(e) => handleDragStart(e, todo)}
+            onDragOver={(e) => handleDragOver(e, todo)}
+            onCheck={() => handleCheck(todo)}
+            onDelete={() => handleDelete(todo)}
+            onStrike={() => handleStrike(todo)}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default Dashboard;
